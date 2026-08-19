@@ -4,6 +4,9 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 import { prisma } from './db.js';
 import keywordsRouter from './routes/keywords.js';
@@ -47,6 +50,28 @@ app.post('/api/check-hotspots', async (req, res) => {
     res.status(500).json({ error: 'Failed to run hotspot check' });
   }
 });
+
+// 生产环境：托管前端构建产物，实现前后端同源部署
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+
+if (fs.existsSync(clientDistPath)) {
+  // 托管 React 构建产物（Vite 默认输出到 client/dist）
+  app.use(express.static(clientDistPath));
+
+  // SPA 回退：非 API / 非 socket.io 的 GET 请求返回 index.html
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+      return res.sendFile(path.join(clientDistPath, 'index.html'));
+    }
+    next();
+  });
+
+  console.log(`📦 已启用前端静态托管: ${clientDistPath}`);
+} else {
+  console.log('ℹ️ 未找到前端构建产物 (client/dist)，仅提供 API 服务（开发模式请使用 Vite dev server）');
+}
 
 // WebSocket connection handling
 io.on('connection', (socket) => {

@@ -1,0 +1,21 @@
+# 依赖与构建产物（在镜像内重建）
+node_modules
+**/node_modules
+server/dist
+client/dist
+
+# 敏感文件（绝不进入镜像）
+**/.env
+*.db
+*.db-journal
+
+# 版本控制
+.git
+.gitignore
+
+# 无需进入构建上下文的文件
+docs
+README.assets
+Dockerfile
+.dockerignore
+render.yaml
